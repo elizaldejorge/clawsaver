@@ -69,7 +69,7 @@ export function buildGodHtml(db: Database.Database): string {
     const hb = c.is_heartbeat ? "💓" : "💬";
     const costClass = c.cost_usd > 0.01 ? "cost-high" : c.cost_usd > 0.001 ? "cost-mid" : "cost-low";
     return `
-      <tr class="${c.is_heartbeat ? "hb" : ""}" title="${esc(c.task_snippet ?? "")}">
+      <tr class="${c.is_heartbeat ? "hb" : ""} clickable" onclick="window.open('http://localhost:3333/call/' + ${c.id}, '_blank')" style="cursor:pointer" title="${esc(c.task_snippet ?? "")}">
         <td>${t}</td>
         <td class="model">${esc(model)}</td>
         <td class="num">${c.input_tokens.toLocaleString()}</td>
