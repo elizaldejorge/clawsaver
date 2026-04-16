@@ -54,16 +54,16 @@ export default definePluginEntry({
     //   agent_turn_end  (fired after the model finishes a turn)
     // This is confirmed in the plugin architecture docs under "Agent lifecycle hooks".
 
-    api.registerHook(
-      ["agent_turn_end"],
+    api.on("llm_output",
       async (event: Record<string, unknown>) => {
         try {
           const usage = event.usage as Record<string, unknown> | undefined;
+          api.logger.info("llm_output event: " + JSON.stringify(event).slice(0, 500));
           if (!usage) return; // Some turns (tool-only) may have no usage
 
           const model = str(event.model ?? event.modelId ?? "");
-          const inputTokens = num(usage.inputTokens ?? usage.input_tokens);
-          const outputTokens = num(usage.outputTokens ?? usage.output_tokens);
+          const inputTokens = num(usage.input ?? usage.inputTokens ?? usage.input_tokens);
+          const outputTokens = num(usage.output ?? usage.outputTokens ?? usage.output_tokens);
           const cacheReadTokens = num(
             usage.cacheReadInputTokens ??
             usage.cache_read_tokens ??

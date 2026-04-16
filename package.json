@@ -4,7 +4,8 @@
   "description": "See exactly where your OpenClaw money went. Per-call cost breakdown, skill attribution, daily digests.",
   "type": "module",
   "openclaw": {
-    "extensions": ["./index.ts"]
+    "extensions": ["./index.ts"],
+    "ignore": ["node_modules", ".git"]
   },
   "peerDependencies": {
     "openclaw": ">=2026.3.24"
