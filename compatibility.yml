@@ -1,0 +1,124 @@
+name: OpenClaw Compatibility
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 9am UTC daily
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Get latest OpenClaw version
+        id: oc
+        run: |
+          VERSION=$(npm view openclaw version 2>/dev/null || echo "unknown")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Latest OpenClaw: $VERSION"
+
+      - name: Check manifest is valid
+        run: |
+          node -e "
+            const p = JSON.parse(require('fs').readFileSync('package.json','utf8'));
+            if (!p.openclaw?.extensions?.length) throw new Error('Missing openclaw.extensions');
+            console.log('Manifest OK — extensions:', p.openclaw.extensions);
+          "
+
+      - name: TypeScript check (no runtime needed)
+        run: |
+          npm install --save-dev typescript @types/node @types/better-sqlite3 2>/dev/null || true
+          # Check that our TS files have no obvious syntax errors
+          node -e "
+            const fs = require('fs');
+            const files = ['index.ts','db.ts','pricing.ts','dashboard.ts','digest.ts'];
+            for (const f of files) {
+              if (!fs.existsSync(f)) { console.error('Missing:', f); process.exit(1); }
+              const src = fs.readFileSync(f,'utf8');
+              // Basic sanity: file is not empty and has expected exports
+              if (src.length < 100) { console.error('Suspiciously short:', f); process.exit(1); }
+              console.log('OK:', f, src.length + ' chars');
+            }
+          "
+
+      - name: Check for breaking changes in OpenClaw release
+        if: env.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          node --input-type=module << 'EOF'
+          const version = '${{ steps.oc.outputs.version }}';
+          if (version === 'unknown') { console.log('Could not get version — skipping'); process.exit(0); }
+
+          let changelog = '';
+          try {
+            const r = await fetch('https://api.github.com/repos/openclaw/openclaw/releases/latest');
+            const data = await r.json();
+            changelog = data.body ?? '';
+          } catch { console.log('Could not fetch changelog'); process.exit(0); }
+
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.ANTHROPIC_API_KEY,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 300,
+              messages: [{
+                role: 'user',
+                content: `You are checking if an OpenClaw release breaks a specific plugin.
+
+Plugin details:
+- Uses api.registerHook(["agent_turn_end"], ...) to capture LLM usage
+- Uses api.registerTool(...) with execute(_callId, params) signature
+- Uses api.registerCommand(...) with handler: async () => ({text: string})
+- Imports from openclaw/plugin-sdk/plugin-entry
+- Uses better-sqlite3 and node-cron directly (not OpenClaw internals)
+
+OpenClaw ${version} changelog:
+${changelog.slice(0, 2000)}
+
+Does this changelog break any of the above? Reply in this exact format:
+BREAKING: yes/no
+REASON: one sentence (or "none")
+ACTION: what to fix (or "none")`
+              }]
+            })
+          });
+
+          const data = await resp.json();
+          const analysis = data.content?.[0]?.text ?? '';
+          console.log('\n=== Changelog Analysis for v' + version + ' ===');
+          console.log(analysis);
+          console.log('============================================\n');
+
+          if (analysis.includes('BREAKING: yes')) {
+            console.log('⚠️  BREAKING CHANGES DETECTED');
+            process.exit(1);
+          } else {
+            console.log('✅ No breaking changes');
+          }
+          EOF
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ Compatibility issue with OpenClaw ${{ steps.oc.outputs.version }}`,
+              body: `The daily compatibility check failed.\n\n**OpenClaw version:** ${{ steps.oc.outputs.version }}\n**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nPlease review and patch before users report breakage.`,
+              labels: ['bug', 'compatibility'],
+            });

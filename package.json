@@ -1,0 +1,27 @@
+{
+  "name": "clawsaver",
+  "version": "1.0.0",
+  "description": "See exactly where your OpenClaw money went. Per-call cost breakdown, skill attribution, daily digests.",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "validate": "node --input-type=module -e \"import('./index.ts').then(() => console.log('OK')).catch(e => { console.error(e); process.exit(1); })\""
+  },
+  "keywords": ["openclaw", "plugin", "cost", "token", "tracking", "savings"],
+  "license": "MIT"
+}
