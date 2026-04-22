@@ -16,6 +16,13 @@ openclaw gateway restart
 
 Open your dashboard: **http://localhost:3333**
 
+> **Note:** After installing, you need to rebuild the native dependency:
+> ```bash
+> cd ~/.openclaw/extensions/clawsaver
+> npm rebuild better-sqlite3
+> openclaw gateway restart
+> ```
+
 ---
 
 ## What it does
@@ -29,31 +36,32 @@ Hover over any row to see the first 120 characters of the user message.
 - Spend by period (24h / 7d / 30d)
 - Bar chart: cost by skill
 - Full sortable call timeline
+- Auto-refreshes every 5 seconds
 
-### 📬 Daily digest (customizable)
+### 🔍 Call Inspector (God Mode)
+Click any row to open a full call receipt in a new tab:
+- The exact user message that triggered the call
+- The full agent reply
+- Tools used
+- Token breakdown (input / output / cache read)
+- Cost breakdown line by line
+
+### 📬 Daily digest
 Add to your HEARTBEAT.md:
 ```
 Every 24 hours, run: /clawsaver-digest and send the output to me.
 ```
 
-Example digest:
-```
-📊 ClawSaver — Yesterday
-💰 Total: $1.47 · 234 calls · 892k tokens
-
-Top spenders:
-  • browser-use: $0.89 (47 calls)
-  • gmail: $0.31 (82 calls)
-  • heartbeat: $0.18 (48 calls)
-
-⚠️ Heartbeats: 48 calls = $0.18
-  → Tip: set a cheap model for heartbeats to cut this 80%
-```
-
 ### 🚨 Budget alerts
 Tell your agent: **"set my daily budget to $5"**
 
-ClawSaver checks every 15 minutes and alerts you when you hit 80% of your limit (configurable).
+ClawSaver checks every 15 minutes and alerts you when you hit 80% of your limit.
+
+### 💰 Session spend limits
+```
+/clawsaver-limit 5
+```
+Sets a $5 session limit. Agent pauses and asks permission when hit.
 
 ### 💬 Natural language control
 Ask your agent:
@@ -67,18 +75,32 @@ Ask your agent:
 
 | Command | What it does |
 |---|---|
-| `/clawsaver-status` | Quick spend summary for today and 7 days |
-| `/clawsaver-digest` | Full breakdown (add to HEARTBEAT.md) |
-| `/clawsaver-budget` | Current budget status |
+| `/clawsaver-status` | Quick spend summary |
+| `/clawsaver-digest` | Full breakdown |
+| `/clawsaver-budget` | Budget status |
+| `/clawsaver-limit 5` | Set $5 session limit |
+| `/clawsaver-continue` | Continue after hitting limit |
+| `/clawsaver-stop` | Stop after hitting limit |
+
+---
+
+## God Mode
+
+God Mode unlocks an enhanced dashboard with:
+- Animated dark space aesthetic
+- 4 stat cards (24h / 7d / 30d / 90d)
+- Hourly activity chart
+- Cost by model breakdown with peak hour analysis
+- 200 calls in timeline (vs 150 regular)
+- **Clickable rows** → full call inspector showing exact prompts and replies
+
+God Mode requires a personal access code. Contact the developer to get one.
 
 ---
 
 ## Pricing coverage
 
 Anthropic, OpenAI, Google, xAI, DeepSeek, Meta, Ollama (local = $0).
-
-Update prices weekly: `node update-pricing.mjs`
-(Uses Claude Haiku — costs ~$0.002 per run.)
 
 ---
 
@@ -94,7 +116,6 @@ Dashboard binds to `127.0.0.1` only.
 
 - Issues: open a GitHub issue
 - OpenClaw Discord: `#plugins` channel
-- Response time: within 24 hours
 
 ---
 
